@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Thread {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  title     String?
+  status    String    @default("regular") // "regular" | "archived"
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  messages  Message[]
+  files     File[]
+
+  @@index([userId])
+  @@map("threads")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String   @map("thread_id")
+  parentId  String?  @map("parent_id")
+  format    String
+  content   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("messages")
+}
+
+model File {
+  id          String   @id @default(cuid())
+  threadId    String?  @map("thread_id")
+  name        String
+  contentType String   @map("content_type")
+  url         String
+  size        Int?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  thread      Thread?  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("files")
+}
