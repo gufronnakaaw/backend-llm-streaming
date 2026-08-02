@@ -77,7 +77,6 @@ export class AppService {
       },
       select: {
         id: true,
-        title: true,
       },
     });
   }
