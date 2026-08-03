@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ChatCompletionResponse } from './app.type';
-import { PrismaService } from './prisma.service';
+import { ChatCompletionResponse } from './app.type.js';
+import { PrismaService } from './prisma.service.js';
 
 @Injectable()
 export class AppService {

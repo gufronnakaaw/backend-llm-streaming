@@ -5,9 +5,9 @@ import {
   streamText,
   toUIMessageStream,
 } from 'ai';
-import { AppService } from './app.service';
-import { RouterService } from './router.service';
-import { SkipInterceptor } from './skip.decorator';
+import { AppService } from './app.service.js';
+import { RouterService } from './router.service.js';
+import { SkipInterceptor } from './skip.decorator.js';
 
 @Controller()
 export class AppController {

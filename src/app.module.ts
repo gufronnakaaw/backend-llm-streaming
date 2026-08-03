@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaService } from './prisma.service';
-import { RouterService } from './router.service';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
+import { PrismaService } from './prisma.service.js';
+import { RouterService } from './router.service.js';
 
 @Module({
   imports: [ConfigModule.forRoot()],

@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SKIP_INTERCEPTOR_KEY } from './skip.decorator';
+import { SKIP_INTERCEPTOR_KEY } from './skip.decorator.js';
 
 export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
