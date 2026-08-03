@@ -1,10 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import {
   convertToModelMessages,
-  createUIMessageStreamResponse,
+  pipeUIMessageStreamToResponse,
   streamText,
   toUIMessageStream,
 } from 'ai';
+import type { Response } from 'express';
 import { AppService } from './app.service.js';
 import { RouterService } from './router.service.js';
 import { SkipInterceptor } from './skip.decorator.js';
@@ -69,6 +78,7 @@ export class AppController {
   async chat(
     @Body()
     body: any,
+    @Res() res: Response,
   ) {
     const { messages, system } = body;
 
@@ -78,7 +88,8 @@ export class AppController {
       system,
     });
 
-    return createUIMessageStreamResponse({
+    pipeUIMessageStreamToResponse({
+      response: res,
       stream: toUIMessageStream({ stream: result.stream }),
     });
   }
