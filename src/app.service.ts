@@ -85,7 +85,9 @@ export class AppService {
     threadId: string,
     messages: { role: 'assistant' | 'user'; content: string }[],
   ) {
-    const lastUserMessage = messages.findLast((m) => m.role === 'user');
+    const lastUserMessage = messages.filter((m) => m.role === 'user')[
+      messages.length - 1
+    ];
 
     const res = await fetch(
       `${process.env.LLM_API_ENDPOINT}/v1/chat/completions`,
