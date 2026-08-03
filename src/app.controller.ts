@@ -68,9 +68,9 @@ export class AppController {
   async generateTitle(
     @Param('id') id: string,
     @Body()
-    messages: { role: 'assistant' | 'user'; content: string }[],
+    body: { messages: { role: 'assistant' | 'user'; content: string }[] },
   ) {
-    return this.appService.generateTitle(id, messages);
+    return this.appService.generateTitle(id, body.messages);
   }
 
   @Post('chat')
