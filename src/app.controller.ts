@@ -1,9 +1,20 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+  toUIMessageStream,
+} from 'ai';
 import { AppService } from './app.service';
+import { RouterService } from './router.service';
+import { SkipInterceptor } from './skip.decorator';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly routerService: RouterService,
+  ) {}
 
   @Get()
   getHello(): string {
@@ -51,5 +62,24 @@ export class AppController {
     messages: { role: 'assistant' | 'user'; content: string }[],
   ) {
     return this.appService.generateTitle(id, messages);
+  }
+
+  @Post('chat')
+  @SkipInterceptor()
+  async chat(
+    @Body()
+    body: any,
+  ) {
+    const { messages, system } = body;
+
+    const result = streamText({
+      model: this.routerService.router.chatModel('oc/mimo-v2.5-free'),
+      messages: await convertToModelMessages(messages),
+      system,
+    });
+
+    return createUIMessageStreamResponse({
+      stream: toUIMessageStream({ stream: result.stream }),
+    });
   }
 }
