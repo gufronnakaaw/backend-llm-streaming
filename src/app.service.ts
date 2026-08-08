@@ -98,7 +98,7 @@ export class AppService {
           Authorization: `Bearer ${process.env.LLM_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'kc/nvidia/nemotron-3-super-120b-a12b:free',
+          model: 'kc/nvidia/nemotron-3-ultra-550b-a55b:free',
           messages: [
             {
               role: 'system',
