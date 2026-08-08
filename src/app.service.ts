@@ -98,7 +98,7 @@ export class AppService {
           Authorization: `Bearer ${process.env.LLM_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'kc/nvidia/nemotron-3-ultra-550b-a55b:free',
+          model: 'oc/deepseek-v4-flash-free',
           messages: [
             {
               role: 'system',
