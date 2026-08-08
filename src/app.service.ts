@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChatCompletionResponse } from './app.type.js';
+import { ChatCompletionResponse, SearchResult } from './app.type.js';
 import { PrismaService } from './prisma.service.js';
 
 @Injectable()
@@ -131,6 +131,39 @@ export class AppService {
         title: true,
       },
     });
+  }
+
+  async webSearch(query: string, search_depth: number) {
+    const res = await fetch(`https://api.tavily.com/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query,
+        search_depth,
+        include_favicon: true,
+        max_results: 5,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Request failed (${res.status}): ${errText}`);
+    }
+
+    const data: SearchResult = await res.json();
+
+    return {
+      answer: data.answer ?? null,
+      results: data.results.map((r) => ({
+        title: r.title,
+        url: r.url,
+        snippet: r.content,
+        favicon: r.favicon,
+      })),
+    };
   }
 
   getHello(): string {

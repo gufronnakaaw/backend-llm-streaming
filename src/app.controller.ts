@@ -10,11 +10,16 @@ import {
 import {
   convertToModelMessages,
   pipeUIMessageStreamToResponse,
+  stepCountIs,
   streamText,
+  tool,
   toUIMessageStream,
+  zodSchema,
 } from 'ai';
 import type { Response } from 'express';
+import z from 'zod';
 import { AppService } from './app.service.js';
+import type { ChatCompletionBody } from './app.type.js';
 import { RouterService } from './router.service.js';
 import { SkipInterceptor } from './skip.decorator.js';
 
@@ -77,15 +82,47 @@ export class AppController {
   @SkipInterceptor()
   async chat(
     @Body()
-    body: any,
+    body: ChatCompletionBody,
     @Res() res: Response,
   ) {
-    const { messages, system } = body;
+    const { messages, metadata } = body;
 
     const result = streamText({
-      model: this.routerService.router.chatModel('oc/mimo-v2.5-free'),
+      model: this.routerService.router.chatModel('forgent'),
       messages: await convertToModelMessages(messages),
-      system,
+      system: `
+      Available tools: ${metadata?.custom?.search ? 'webSearch' : 'none'}.
+
+      If information is unavailable, answer normally.
+      Never emit tool calls or tool request syntax. 
+      
+      Formatting Rules: - For all mathematical expressions, always use double dollar-sign delimiters. - Use $$...$$ for every mathematical expression, including expressions that would normally be written inline. - Never use single-dollar delimiters. - Never use \\(...\\) or \\[...\\] delimiters. - When writing mathematical expressions inside strings, treat $$ as literal text and escape it when required by the target language to prevent interpolation, templating, formatting, or parsing errors. - For responses with many sections where some are more important than others, use collapsible sections (<details><summary>...</summary>...</details>) to highlight key information while allowing users to expand less critical details. `,
+      tools: {
+        ...(metadata?.custom?.search
+          ? {
+              webSearch: tool({
+                description: 'Search the web for current information',
+                inputSchema: zodSchema(z.object({ query: z.string() })),
+                execute: async ({ query }) => {
+                  try {
+                    return await this.appService.webSearch(
+                      query as string,
+                      metadata.custom.search_depth,
+                    );
+                  } catch (error) {
+                    console.error('Error during web search:', error);
+                    return {
+                      results: [],
+                      error:
+                        'Search failed. Try a different query or ask again in a moment.',
+                    };
+                  }
+                },
+              }),
+            }
+          : {}),
+      },
+      stopWhen: stepCountIs(5),
     });
 
     pipeUIMessageStreamToResponse({

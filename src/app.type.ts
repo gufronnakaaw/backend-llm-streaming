@@ -14,3 +14,34 @@ export interface ChatCompletionResponse {
     total_tokens: number;
   };
 }
+
+export interface ChatCompletionBody {
+  messages: any[];
+  metadata: {
+    custom: {
+      search_depth: number;
+      search: boolean;
+    };
+  };
+  config: {
+    modelName: string;
+  };
+}
+
+export interface SearchResult {
+  query: string;
+  follow_up_questions: any;
+  answer: any;
+  images: any[];
+  results: {
+    url: string;
+    title: string;
+    content: string;
+    score: number;
+    raw_content: any;
+    favicon: string;
+    id: string;
+  }[];
+  response_time: number;
+  request_id: string;
+}
