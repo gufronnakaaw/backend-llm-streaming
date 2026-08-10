@@ -1,3 +1,5 @@
+import { UIMessage } from 'ai';
+
 export interface ChatCompletionResponse {
   id: string;
   choices: {
@@ -16,7 +18,7 @@ export interface ChatCompletionResponse {
 }
 
 export interface ChatCompletionBody {
-  messages: any[];
+  messages: UIMessage[];
   metadata: {
     custom: {
       search_depth: number;

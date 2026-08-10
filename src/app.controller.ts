@@ -87,16 +87,24 @@ export class AppController {
   ) {
     const { messages, metadata } = body;
 
+    const sanitizedMessages = metadata?.custom?.search
+      ? messages
+      : messages.map((m) => ({
+          ...m,
+          parts:
+            m.parts?.filter((p) => !p.type?.startsWith('tool-')) ?? m.parts,
+        }));
+
     const result = streamText({
       model: this.routerService.router.chatModel('forgent'),
-      messages: await convertToModelMessages(messages),
+      messages: await convertToModelMessages(sanitizedMessages),
       system: `
       Available tools: ${metadata?.custom?.search ? 'webSearch' : 'none'}.
 
       If information is unavailable, answer normally.
       Never emit tool calls or tool request syntax. 
       
-      Formatting Rules: - For all mathematical expressions, always use double dollar-sign delimiters. - Use $$...$$ for every mathematical expression, including expressions that would normally be written inline. - Never use single-dollar delimiters. - Never use \\(...\\) or \\[...\\] delimiters. - When writing mathematical expressions inside strings, treat $$ as literal text and escape it when required by the target language to prevent interpolation, templating, formatting, or parsing errors. - For responses with many sections where some are more important than others, use collapsible sections (<details><summary>...</summary>...</details>) to highlight key information while allowing users to expand less critical details. `,
+      Formatting Rules: - For all mathematical expressions, always use double dollar-sign delimiters. - Use $$...$$ for every mathematical expression, including expressions that would normally be written inline. - Never use single-dollar delimiters. - Never use \\(...\\) or \\[...\\] delimiters. - When writing mathematical expressions inside strings, treat $$ as literal text and escape it when required by the target language to prevent interpolation, templating, formatting, or parsing errors.`,
       tools: {
         ...(metadata?.custom?.search
           ? {
@@ -125,7 +133,7 @@ export class AppController {
       stopWhen: stepCountIs(5),
     });
 
-    pipeUIMessageStreamToResponse({
+    void pipeUIMessageStreamToResponse({
       response: res,
       stream: toUIMessageStream({ stream: result.stream }),
     });
