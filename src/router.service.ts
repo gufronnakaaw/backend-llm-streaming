@@ -8,4 +8,10 @@ export class RouterService {
     apiKey: process.env.LLM_API_KEY || '',
     name: 'customrouter',
   });
+
+  readonly generateText = createOpenAICompatible({
+    baseURL: `${process.env.LLM_GENERATE_TEXT_API_ENDPOINT}/v1`,
+    apiKey: process.env.LLM_GENERATE_TEXT_API_KEY || '',
+    name: 'generateText',
+  });
 }

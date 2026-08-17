@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { ChatCompletionResponse, SearchResult } from './app.type.js';
+import { generateText } from 'ai';
+import { SearchResult } from './app.type.js';
 import { PrismaService } from './prisma.service.js';
+import { RouterService } from './router.service.js';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private routerService: RouterService,
+  ) {}
 
   getThreads() {
     return this.prisma.thread.findMany({
@@ -89,47 +94,42 @@ export class AppService {
       .toReversed()
       .find((m) => m.role === 'user');
 
-    const res = await fetch(
-      `${process.env.LLM_API_ENDPOINT}/v1/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.LLM_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'oc/deepseek-v4-flash-free',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Generate a very short title (max 5 words) for this conversation. Output must match the regex ^[A-Za-z ]+$ and contain no other characters. Return only the title.',
-            },
-            { role: 'user', content: lastUserMessage?.content ?? '' },
-          ],
-          stream: false,
-          reasoning: { enabled: false },
-        }),
-      },
-    );
+    let title: string | undefined;
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Request failed (${res.status}): ${errText}`);
+    try {
+      const { text } = await generateText({
+        model: this.routerService.generateText.chatModel(
+          process.env.LLM_GENERATE_TEXT as string,
+        ),
+        system:
+          'Generate a very short title (max 5 words) for this conversation. Output must match the regex ^[A-Za-z ]+$ and contain no other characters. Return only the title. ',
+        messages: [
+          {
+            role: 'user',
+            content: lastUserMessage?.content || 'No user message found.',
+          },
+        ],
+      });
+      title = text?.trim();
+    } catch (err) {
+      console.log(err);
+      // biarin title undefined, fallback logic di bawah yang handle
     }
 
-    const result = (await res.json()) as ChatCompletionResponse;
-    const text = result?.choices?.[0]?.message?.content;
-
-    const title = text?.trim() || 'New Chat';
+    if (!title) {
+      const existing = await this.prisma.thread.findUnique({
+        where: { id: threadId },
+        select: { title: true },
+      });
+      if (existing?.title && existing.title !== 'New Chat') {
+        return existing;
+      }
+    }
 
     return this.prisma.thread.update({
       where: { id: threadId },
-      data: { title },
-      select: {
-        id: true,
-        title: true,
-      },
+      data: { title: title || 'New Chat' },
+      select: { id: true, title: true },
     });
   }
 

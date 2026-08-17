@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Res,
 } from '@nestjs/common';
@@ -12,16 +13,14 @@ import {
   pipeUIMessageStreamToResponse,
   stepCountIs,
   streamText,
-  tool,
   toUIMessageStream,
-  zodSchema,
 } from 'ai';
 import type { Response } from 'express';
-import z from 'zod';
 import { AppService } from './app.service.js';
 import type { ChatCompletionBody } from './app.type.js';
 import { RouterService } from './router.service.js';
 import { SkipInterceptor } from './skip.decorator.js';
+import { webSearch } from './tools.js';
 
 @Controller()
 export class AppController {
@@ -53,6 +52,11 @@ export class AppController {
   @Delete('threads/:id')
   deleteThread(@Param('id') id: string) {
     return this.appService.deleteThread(id);
+  }
+
+  @Patch('threads/:id')
+  updateThread(@Param('id') id: string, @Body() body: { title: string }) {
+    return this.appService.updateThread(id, body.title);
   }
 
   @Get('threads/:id/messages')
@@ -96,7 +100,7 @@ export class AppController {
         }));
 
     const result = streamText({
-      model: this.routerService.router.chatModel('forgent'),
+      model: this.routerService.router.chatModel(process.env.LLM as string),
       messages: await convertToModelMessages(sanitizedMessages),
       system: `
       Available tools: ${metadata?.custom?.search ? 'webSearch' : 'none'}.
@@ -106,29 +110,7 @@ export class AppController {
       
       Formatting Rules: - For all mathematical expressions, always use double dollar-sign delimiters. - Use $$...$$ for every mathematical expression, including expressions that would normally be written inline. - Never use single-dollar delimiters. - Never use \\(...\\) or \\[...\\] delimiters. - When writing mathematical expressions inside strings, treat $$ as literal text and escape it when required by the target language to prevent interpolation, templating, formatting, or parsing errors.`,
       tools: {
-        ...(metadata?.custom?.search
-          ? {
-              webSearch: tool({
-                description: 'Search the web for current information',
-                inputSchema: zodSchema(z.object({ query: z.string() })),
-                execute: async ({ query }) => {
-                  try {
-                    return await this.appService.webSearch(
-                      query as string,
-                      metadata.custom.search_depth,
-                    );
-                  } catch (error) {
-                    console.error('Error during web search:', error);
-                    return {
-                      results: [],
-                      error:
-                        'Search failed. Try a different query or ask again in a moment.',
-                    };
-                  }
-                },
-              }),
-            }
-          : {}),
+        ...(metadata?.custom?.search ? { webSearch } : {}),
       },
       stopWhen: stepCountIs(5),
     });
