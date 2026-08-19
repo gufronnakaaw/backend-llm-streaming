@@ -26,7 +26,8 @@ export interface ChatCompletionBody {
     };
   };
   config: {
-    modelName: string;
+    modelName: 'forgent/deepseek-v4-flash' | 'forgent/gpt-oss-120b';
+    reasoningEffort: 'low' | 'medium' | 'high';
   };
 }
 

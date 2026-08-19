@@ -1,3 +1,4 @@
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   Body,
   Controller,
@@ -18,6 +19,7 @@ import {
 import type { Response } from 'express';
 import { AppService } from './app.service.js';
 import type { ChatCompletionBody } from './app.type.js';
+import { resolveReasoningEffort } from './models.js';
 import { RouterService } from './router.service.js';
 import { SkipInterceptor } from './skip.decorator.js';
 import { webSearch } from './tools.js';
@@ -55,8 +57,11 @@ export class AppController {
   }
 
   @Patch('threads/:id')
-  updateThread(@Param('id') id: string, @Body() body: { title: string }) {
-    return this.appService.updateThread(id, body.title);
+  updateThread(
+    @Param('id') id: string,
+    @Body() body: { title: string; status: 'regular' | 'archived' },
+  ) {
+    return this.appService.updateThread(id, body);
   }
 
   @Get('threads/:id/messages')
@@ -91,6 +96,17 @@ export class AppController {
   ) {
     const { messages, metadata } = body;
 
+    const config = resolveReasoningEffort(
+      body.config.modelName,
+      body.config.reasoningEffort,
+    );
+
+    const route = createOpenAICompatible({
+      baseURL: config.api_url as string,
+      apiKey: config.api_key,
+      name: 'dynamicRouter',
+    });
+
     const sanitizedMessages = metadata?.custom?.search
       ? messages
       : messages.map((m) => ({
@@ -100,17 +116,22 @@ export class AppController {
         }));
 
     const result = streamText({
-      model: this.routerService.router.chatModel(process.env.LLM as string),
+      model: route.chatModel(config.id),
       messages: await convertToModelMessages(sanitizedMessages),
       system: `
       Available tools: ${metadata?.custom?.search ? 'webSearch' : 'none'}.
 
-      If information is unavailable, answer normally.
+      If tools is unavailable, answer normally.
       Never emit tool calls or tool request syntax. 
       
       Formatting Rules: - For all mathematical expressions, always use double dollar-sign delimiters. - Use $$...$$ for every mathematical expression, including expressions that would normally be written inline. - Never use single-dollar delimiters. - Never use \\(...\\) or \\[...\\] delimiters. - When writing mathematical expressions inside strings, treat $$ as literal text and escape it when required by the target language to prevent interpolation, templating, formatting, or parsing errors.`,
       tools: {
         ...(metadata?.custom?.search ? { webSearch } : {}),
+      },
+      providerOptions: {
+        dynamicRouter: {
+          reasoning_effort: config.effort,
+        },
       },
       stopWhen: stepCountIs(5),
     });

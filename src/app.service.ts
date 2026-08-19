@@ -13,6 +13,9 @@ export class AppService {
 
   getThreads() {
     return this.prisma.thread.findMany({
+      where: {
+        status: 'regular',
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -39,10 +42,13 @@ export class AppService {
     });
   }
 
-  updateThread(id: string, title: string) {
+  updateThread(
+    id: string,
+    body: { title: string; status: 'regular' | 'archived' },
+  ) {
     return this.prisma.thread.update({
       where: { id },
-      data: { title },
+      data: { title: body.title, status: body.status },
       select: {
         id: true,
         title: true,
